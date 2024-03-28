@@ -38,6 +38,13 @@ public class Game
         }
         Rooms[0, 0] = new EntranceRoom();
         Rooms[_rowOfFountain, _colOfFountain] = new FountainOfObjectsRoom();
+
+        if (levelSize == LevelSize.Small)
+            Rooms[0, 1] = new PitRoom();
+        else if (levelSize == LevelSize.Medium)
+            (Rooms[1, 3], Rooms[2, 4]) = (new PitRoom(), new PitRoom());
+        else if (levelSize == LevelSize.Large)
+            (Rooms[2, 6], Rooms[0, 2], Rooms[1, 5], Rooms[6, 4]) = (new PitRoom(), new PitRoom(), new PitRoom(), new PitRoom());
     }
 
     public void Run()
@@ -60,6 +67,15 @@ public class Game
             }
 
             _renderer.PrintRoomDescription(Rooms[Player.Row, Player.Col]);
+
+            if (HasLost())
+            {
+                _renderer.PrintLostMessage();
+                break;
+            }
+
+            Sense();
+
             AskForPlayerAction();
         }
     }
@@ -78,14 +94,52 @@ public class Game
         return _playerInput.AskForLevelSize();
     }
 
+    private void Sense()
+    {
+        // North
+        if (Player.Row < Rows - 1)
+            SenseRoom(Rooms[Player.Row + 1, Player.Col]);
+        // North East
+        if (Player.Row < Rows - 1 && Player.Col < Cols - 1)
+            SenseRoom(Rooms[Player.Row + 1, Player.Col + 1]);
+        // East
+        if (Player.Col < Cols - 1)
+            SenseRoom(Rooms[Player.Row, Player.Col + 1]);
+        // South East
+        if (Player.Row > 0 && Player.Col < Cols - 1)
+            SenseRoom(Rooms[Player.Row - 1, Player.Col + 1]);
+        // South
+        if (Player.Row > 0)
+            SenseRoom(Rooms[Player.Row - 1, Player.Col]);
+        // South West
+        if (Player.Row > 0 && Player.Col > 0)
+            SenseRoom(Rooms[Player.Row - 1, Player.Col - 1]);
+        // West
+        if (Player.Row > 0 && Player.Col > 0)
+            SenseRoom(Rooms[Player.Row, Player.Col - 1]);
+        // North West
+        if (Player.Row < Rows && Player.Col > 0)
+            SenseRoom(Rooms[Player.Row + 1, Player.Col - 1]);
+    }
+
+    private void SenseRoom(IRoom room)
+    {
+        if (room.GetType() == typeof(PitRoom))
+            _renderer.PrintSensePit();
+    }
+
     private bool HasWon()
     {
         FountainOfObjectsRoom? room = Rooms[_rowOfFountain, _colOfFountain] as FountainOfObjectsRoom;
         EntranceRoom? playerRoom = Rooms[Player.Row, Player.Col] as EntranceRoom;
-        if (room != null && room.IsEnabled && playerRoom != null )
-            return true;
-        return false;
+        return room != null && room.IsEnabled && playerRoom != null;
     }
+
+    private bool HasLost() => Rooms[Player.Row, Player.Col] switch
+    {
+        PitRoom => true,
+        _ => false,
+    };
 }
 
 public class Player
@@ -241,7 +295,7 @@ public class EmptyRoom : IRoom
 {
     public override string ToString()
     {
-        return "You do not sense anything. The room appears to be empty.";
+        return "The room appears to be empty.";
     }
 }
 
@@ -263,6 +317,14 @@ public class EntranceRoom : IRoom
     public override string ToString()
     {
         return "You see light coming from the cavern entrance.";
+    }
+}
+
+public class PitRoom : IRoom
+{
+    public override string ToString()
+    {
+        return "You fall into a pit and you die.";
     }
 }
 
@@ -291,12 +353,20 @@ public class Renderer
         ResetColor();
     }
 
+    public void PrintLostMessage()
+    {
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.WriteLine("You lost!");
+        ResetColor();
+    }
+
     public void PrintRoomDescription(IRoom room)
     {
         Console.ForegroundColor = room switch
         {
             FountainOfObjectsRoom => ConsoleColor.Blue,
             EntranceRoom => ConsoleColor.Yellow,
+            PitRoom => ConsoleColor.DarkYellow,
             _ => ConsoleColor.White,
         };
         Console.WriteLine(room);
@@ -314,6 +384,11 @@ public class Renderer
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.Write(text);
+    }
+
+    public void PrintSensePit()
+    {
+        Console.WriteLine("You feel a draft. There is a pit in a nearby room.");
     }
 
     public void ResetColor()
