@@ -7,12 +7,22 @@ public class Game
     private readonly Renderer _renderer;
     private readonly PlayerInput _playerInput;
 
-    public IRoom[,] Rooms { get; }
+    private const int _ROW_OF_FOUNTAIN = 0;
+    private const int _COL_OF_FOUNTAIN = 2;
+
+    public IRoom[,] Rooms { get; private set; }
     public Player Player { get; } = new Player();
     public int Rows { get; } = 4;
     public int Cols { get; } = 4;
 
     public Game(Renderer renderer, PlayerInput playerInput)
+    {
+        CreateRoom();
+        _renderer = renderer;
+        _playerInput = playerInput;
+    }
+
+    private void CreateRoom()
     {
         Rooms = new IRoom[,]
         {
@@ -21,8 +31,6 @@ public class Game
             {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
             {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
         };
-        _renderer = renderer;
-        _playerInput = playerInput;
     }
 
     public void Run()
@@ -64,8 +72,9 @@ public class Game
 
     private bool HasWon()
     {
-        FountainOfObjectsRoom? room = Rooms[0, 2] as FountainOfObjectsRoom;
-        if (room != null && Player.Row == 0 && Player.Col == 0 && room.IsEnabled)
+        FountainOfObjectsRoom? room = Rooms[_ROW_OF_FOUNTAIN, _COL_OF_FOUNTAIN] as FountainOfObjectsRoom;
+        EntranceRoom? playerRoom = Rooms[Player.Row, Player.Col] as EntranceRoom;
+        if (room != null && room.IsEnabled && playerRoom != null )
             return true;
         return false;
     }
