@@ -142,10 +142,15 @@ public class Game
 
     private void SenseRoom(IRoom room)
     {
-        if (room.GetType() == typeof(PitRoom))
-            _renderer.PrintSensePit();
-        if (room.GetType() == typeof(MaelstromRoom))
-            _renderer.PrintSenseMaelstrom();
+        switch (room.RoomType)
+        {
+            case RoomType.Pit:
+                _renderer.PrintSensePit();
+                break;
+            case RoomType.Maelstrom:
+                _renderer.PrintSenseMaelstrom();
+                break;
+        }
     }
 
     private bool HasWon()
@@ -314,11 +319,13 @@ public class EnableFountain : IAction
 
 public interface IRoom
 {
-    
+    public RoomType RoomType { get; }
 }
 
 public class EmptyRoom : IRoom
 {
+    public RoomType RoomType { get; } = RoomType.Empty;
+
     public override string ToString()
     {
         return "The room appears to be empty.";
@@ -327,6 +334,8 @@ public class EmptyRoom : IRoom
 
 public class FountainOfObjectsRoom : IRoom
 {
+    public RoomType RoomType { get; } = RoomType.FountainOfObjects;
+
     public bool IsEnabled = false;
 
     public override string ToString()
@@ -340,6 +349,8 @@ public class FountainOfObjectsRoom : IRoom
 
 public class EntranceRoom : IRoom
 {
+    public RoomType RoomType { get; } = RoomType.Entrance;
+
     public override string ToString()
     {
         return "You see light coming from the cavern entrance.";
@@ -348,6 +359,8 @@ public class EntranceRoom : IRoom
 
 public class PitRoom : IRoom
 {
+    public RoomType RoomType { get; } = RoomType.Pit;
+
     public override string ToString()
     {
         return "You fall into a pit and you die.";
@@ -356,6 +369,8 @@ public class PitRoom : IRoom
 
 public class MaelstromRoom : IRoom
 {
+    public RoomType RoomType { get; } = RoomType.Maelstrom;
+
     public override string ToString()
     {
         return "You encounter the maelstrom - a sentient, malevolent wind.";
@@ -449,6 +464,15 @@ public enum LevelSize
     Small,
     Medium,
     Large
+}
+
+public enum RoomType
+{
+    Empty,
+    Entrance,
+    FountainOfObjects,
+    Pit,
+    Maelstrom
 }
 
 public class InvalidInputException : Exception
