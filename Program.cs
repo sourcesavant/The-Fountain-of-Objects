@@ -1,16 +1,18 @@
-﻿using System.Runtime.CompilerServices;
-
-Game game = new Game();
+﻿Renderer renderer = new Renderer();
+Game game = new Game(renderer, new PlayerInput(renderer));
 game.Run();
 
 public class Game
 {
+    private readonly Renderer _renderer;
+    private readonly PlayerInput _playerInput;
+
     public IRoom[,] Rooms { get; }
     public Player Player { get; } = new Player();
     public int Rows { get; } = 4;
     public int Cols { get; } = 4;
 
-    public Game()
+    public Game(Renderer renderer, PlayerInput playerInput)
     {
         Rooms = new IRoom[,]
         {
@@ -19,43 +21,45 @@ public class Game
             {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
             {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
         };
+        _renderer = renderer;
+        _playerInput = playerInput;
     }
 
     public void Run()
     {
-        PrintIntro();
-        
+        _renderer.PrintGameIntro();
+        GameLoop();
+    }
+
+    private void GameLoop()
+    {
         while (true)
         {
-            Console.WriteLine("----------------------------------------------------------------------------------");
-            Console.WriteLine($"You are in the room at (Row={Player.Row} Column={Player.Col})");
-                        
+            _renderer.PrintRoundIntro(Player.Row, Player.Col);
+
             if (HasWon())
             {
-                ColoredText.PrintNarrativeText("The Fountain of Objects has been reactivated, and you have escaped with your life!");
-                ColoredText.PrintNarrativeText("You win!");
+                _renderer.PrintWinMessage();
                 break;
             }
 
-            ColoredText.PrintRoomText(Rooms[Player.Row, Player.Col]);
-            
-            try
-            {
-                IAction action = Player.askForAction();
-                if (!Player.executeAction(this, action))
-                    ColoredText.PrintErrorText("Cannot do this action here.");
-            }
-            catch             {
-                ColoredText.PrintErrorText("Invalid input.");
-            }
+            _renderer.PrintRoomDescription(Rooms[Player.Row, Player.Col]);
+            AskForPlayerAction();
         }
     }
 
-    private void PrintIntro()
+    private void AskForPlayerAction()
     {
-        ColoredText.PrintNarrativeText("Welome to the The Fountain of Objects!");
-        ColoredText.PrintNarrativeText("Unnatural darkness pervades the caverns, preventing both natural and human-made light. You must navigate the caverns in the dark.");
-        ColoredText.PrintNarrativeText("To escape you must find and enable the Fountain of Objects. But beware, dangers may lurk in every room.");
+        try
+        {
+            IAction action = _playerInput.askForAction();
+            if (!Player.executeAction(this, action))
+                _renderer.PrintError("Cannot do this action here.");
+        }
+        catch
+        {
+            _renderer.PrintError("Invalid input.");
+        }
     }
 
     private bool HasWon()
@@ -76,13 +80,23 @@ public class Player
     {
         return action.execute(game);
     }
+}
+
+public class PlayerInput
+{
+    private readonly Renderer _renderer;
+
+    public PlayerInput(Renderer renderer)
+    {
+        _renderer = renderer;
+    }
 
     public IAction askForAction()
     {
-        ColoredText.PrintPromptText("What do you want to do? ");
+        _renderer.PrintPromptText("What do you want to do? ");
         IAction action;
         string? input = Console.ReadLine();
-        ColoredText.Reset();
+        _renderer.ResetColor();
         if (input != null)
         {
             action = input switch
@@ -97,11 +111,6 @@ public class Player
             return action;
         }
         throw new Exception();
-    }
-
-    public override string ToString()
-    {
-        return $"X: {Row} Y: {Col}";
     }
 }
 
@@ -210,15 +219,32 @@ public class EntranceRoom : IRoom
     }
 }
 
-public class ColoredText
+public class Renderer
 {
-
-    public static void Reset()
+    public void PrintGameIntro()
     {
-        Console.ForegroundColor = ConsoleColor.White;
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.WriteLine("Welome to the The Fountain of Objects!");
+        Console.WriteLine("Unnatural darkness pervades the caverns, preventing both natural and human-made light. You must navigate the caverns in the dark.");
+        Console.WriteLine("To escape you must find and enable the Fountain of Objects. But beware, dangers may lurk in every room.");
+        ResetColor();
     }
-    
-    public static void PrintRoomText(IRoom room)
+
+    public void PrintRoundIntro(int playerRow, int playerCol)
+    {
+        Console.WriteLine("----------------------------------------------------------------------------------");
+        Console.WriteLine($"You are in the room at (Row={playerRow} Column={playerCol})");
+    }
+
+    public void PrintWinMessage()
+    {
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.WriteLine("The Fountain of Objects has been reactivated, and you have escaped with your life!");
+        Console.WriteLine("You win!");
+        ResetColor();
+    }
+
+    public void PrintRoomDescription(IRoom room)
     {
         Type roomType = room.GetType();
         Console.ForegroundColor = roomType switch
@@ -228,26 +254,40 @@ public class ColoredText
             _ => ConsoleColor.White,
         };
         Console.WriteLine(room);
-        Console.ForegroundColor = ConsoleColor.White;
+        ResetColor();
     }
 
-    public static void PrintNarrativeText(string text)
+    public void PrintError (string message)
     {
-        Console.ForegroundColor = ConsoleColor.Magenta;
-        Console.WriteLine(text);
-        Console.ForegroundColor = ConsoleColor.White;
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine(message);
+        ResetColor();
     }
 
-    public static void PrintPromptText(string text)
+    public void PrintPromptText(string text)
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.Write(text);
     }
 
-    public static void PrintErrorText (string text)
+    public void ResetColor()
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine(text);
         Console.ForegroundColor = ConsoleColor.White;
+    }
+}
+
+public class ColoredText
+{
+
+    public static void Reset()
+    {
+        Console.ForegroundColor = ConsoleColor.White;
+    }
+    
+    
+    public static void PrintPromptText(string text)
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.Write(text);
     }
 }
