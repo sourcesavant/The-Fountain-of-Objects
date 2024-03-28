@@ -6,36 +6,44 @@ public class Game
 {
     private readonly Renderer _renderer;
     private readonly PlayerInput _playerInput;
-
-    private const int _ROW_OF_FOUNTAIN = 0;
-    private const int _COL_OF_FOUNTAIN = 2;
+    private int _rowOfFountain;
+    private int _colOfFountain;
 
     public IRoom[,] Rooms { get; private set; }
     public Player Player { get; } = new Player();
-    public int Rows { get; } = 4;
-    public int Cols { get; } = 4;
+    public int Rows { get; private set; }
+    public int Cols { get; private set; }
 
     public Game(Renderer renderer, PlayerInput playerInput)
     {
-        CreateRoom();
         _renderer = renderer;
         _playerInput = playerInput;
     }
 
-    private void CreateRoom()
+    private void CreateRoom(LevelSize levelSize)
     {
-        Rooms = new IRoom[,]
+        (Rows, Cols, _rowOfFountain, _colOfFountain) = levelSize switch
         {
-            {new EntranceRoom(), new EmptyRoom(), new FountainOfObjectsRoom(), new EmptyRoom() },
-            {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
-            {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
-            {new EmptyRoom(), new EmptyRoom(), new EmptyRoom(), new EmptyRoom() },
+            LevelSize.Small  => (4, 4, 0, 2),
+            LevelSize.Medium => (6, 6, 1, 4),
+            LevelSize.Large  => (8, 8, 3, 6),
+            _ => throw new ArgumentOutOfRangeException(nameof(levelSize))
         };
+        
+        Rooms = new IRoom[Rows, Cols];
+        for (int i = 0; i < Rows; i++)
+        {
+            for (int j = 0; j < Cols; j++)
+                Rooms[i, j] = new EmptyRoom();
+        }
+        Rooms[0, 0] = new EntranceRoom();
+        Rooms[_rowOfFountain, _colOfFountain] = new FountainOfObjectsRoom();
     }
 
     public void Run()
     {
         _renderer.PrintGameIntro();
+        CreateRoom(AskForLevelSize());
         GameLoop();
     }
 
@@ -56,23 +64,23 @@ public class Game
         }
     }
 
+    
     private void AskForPlayerAction()
     {
-        try
-        {
-            IAction action = _playerInput.askForAction();
-            if (!Player.executeAction(this, action))
-                _renderer.PrintError("Cannot do this action here.");
-        }
-        catch
-        {
-            _renderer.PrintError("Invalid input.");
-        }
+        IAction action = _playerInput.AskForAction();
+        if (!Player.ExecuteAction(this, action))
+            _renderer.PrintError("Cannot do this action here.");
+    
+    }
+
+    private LevelSize AskForLevelSize()
+    {
+        return _playerInput.AskForLevelSize();
     }
 
     private bool HasWon()
     {
-        FountainOfObjectsRoom? room = Rooms[_ROW_OF_FOUNTAIN, _COL_OF_FOUNTAIN] as FountainOfObjectsRoom;
+        FountainOfObjectsRoom? room = Rooms[_rowOfFountain, _colOfFountain] as FountainOfObjectsRoom;
         EntranceRoom? playerRoom = Rooms[Player.Row, Player.Col] as EntranceRoom;
         if (room != null && room.IsEnabled && playerRoom != null )
             return true;
@@ -85,9 +93,9 @@ public class Player
     public int Row { get; set; } = 0;
     public int Col { get; set; } = 0;
 
-    public bool executeAction (Game game, IAction action)
+    public bool ExecuteAction (Game game, IAction action)
     {
-        return action.execute(game);
+        return action.Execute(game);
     }
 }
 
@@ -100,37 +108,67 @@ public class PlayerInput
         _renderer = renderer;
     }
 
-    public IAction askForAction()
-    {
-        _renderer.PrintPromptText("What do you want to do? ");
-        IAction action;
-        string? input = Console.ReadLine();
-        _renderer.ResetColor();
-        if (input != null)
+    public IAction AskForAction()
+    {        
+        while (true)
         {
-            action = input switch
+            try
             {
-                "move north" => new MoveNorth(),
-                "move east" => new MoveEast(),
-                "move south" => new MoveSouth(),
-                "move west" => new MoveWest(),
-                "enable fountain" => new EnableFountain(),
-                _ => throw new Exception()
-            };
-            return action;
+                _renderer.PrintPromptText("What do you want to do? ");
+                string input = Console.ReadLine() ?? throw new InvalidInputException("Invalid input. Input is null.");
+                _renderer.ResetColor();
+
+                return input switch
+                {
+                    "move north" => new MoveNorth(),
+                    "move east" => new MoveEast(),
+                    "move south" => new MoveSouth(),
+                    "move west" => new MoveWest(),
+                    "enable fountain" => new EnableFountain(),
+                    _ => throw new InvalidInputException("Invalid input. Please enter 'move north', 'move east', 'move south', 'move west' or 'enable fountain'.")
+                };
+            }
+            catch (InvalidInputException e)
+            {
+                _renderer.PrintError(e.Message);
+            }
         }
-        throw new Exception();
+    }
+
+    public LevelSize AskForLevelSize()
+    {
+        while (true)
+        {
+            try
+            {
+                _renderer.PrintPromptText("Do you want to play a small, medium or large game? ");
+                string input = Console.ReadLine() ?? throw new InvalidInputException("Invald input. Input is null");
+                _renderer.ResetColor();
+
+                return input switch
+                {
+                    "small" => LevelSize.Small,
+                    "medium" => LevelSize.Medium,
+                    "large" => LevelSize.Large,
+                    _ => throw new InvalidInputException("Invalid input. Please enter 'small', 'medium', or 'large'.")
+                };
+            }
+            catch (InvalidInputException e)
+            {
+                _renderer.PrintError(e.Message);
+            }
+        }
     }
 }
 
 public interface IAction
 {
-    public bool execute(Game game);
+    public bool Execute(Game game);
 }
 
 public class MoveNorth : IAction
 {
-    public bool execute(Game game)
+    public bool Execute(Game game)
     {
         if (game.Player.Row < game.Rows - 1)
         {
@@ -143,7 +181,7 @@ public class MoveNorth : IAction
 
 public class MoveEast : IAction
 {
-    public bool execute(Game game)
+    public bool Execute(Game game)
     {
         if (game.Player.Col < game.Cols - 1)
         {
@@ -156,7 +194,7 @@ public class MoveEast : IAction
 
 public class MoveSouth : IAction
 {
-    public bool execute(Game game)
+    public bool Execute(Game game)
     {
         if (game.Player.Row > 0)
         {
@@ -169,7 +207,7 @@ public class MoveSouth : IAction
 
 public class MoveWest : IAction
 {
-    public bool execute(Game game)
+    public bool Execute(Game game)
     {
         if (game.Player.Col > 0)
         {
@@ -182,7 +220,7 @@ public class MoveWest : IAction
 
 public class EnableFountain : IAction
 {
-    public bool execute(Game game)
+    public bool Execute(Game game)
     {
         FountainOfObjectsRoom? room = game.Rooms[game.Player.Row, game.Player.Col] as FountainOfObjectsRoom;
         if (room != null)
@@ -255,11 +293,10 @@ public class Renderer
 
     public void PrintRoomDescription(IRoom room)
     {
-        Type roomType = room.GetType();
-        Console.ForegroundColor = roomType switch
+        Console.ForegroundColor = room switch
         {
-            _ when roomType == typeof(FountainOfObjectsRoom) => ConsoleColor.Blue,
-            _ when roomType == typeof(EntranceRoom) => ConsoleColor.Yellow,
+            FountainOfObjectsRoom => ConsoleColor.Blue,
+            EntranceRoom => ConsoleColor.Yellow,
             _ => ConsoleColor.White,
         };
         Console.WriteLine(room);
@@ -285,18 +322,14 @@ public class Renderer
     }
 }
 
-public class ColoredText
+public enum LevelSize
 {
+    Small,
+    Medium,
+    Large
+}
 
-    public static void Reset()
-    {
-        Console.ForegroundColor = ConsoleColor.White;
-    }
-    
-    
-    public static void PrintPromptText(string text)
-    {
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.Write(text);
-    }
+public class InvalidInputException : Exception
+{
+    public InvalidInputException(string message) : base(message) { }
 }
