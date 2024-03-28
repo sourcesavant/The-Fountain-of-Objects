@@ -40,11 +40,20 @@ public class Game
         Rooms[_rowOfFountain, _colOfFountain] = new FountainOfObjectsRoom();
 
         if (levelSize == LevelSize.Small)
+        {
             Rooms[0, 1] = new PitRoom();
+            Rooms[1, 0] = new MaelstromRoom();
+        }
         else if (levelSize == LevelSize.Medium)
+        {
             (Rooms[1, 3], Rooms[2, 4]) = (new PitRoom(), new PitRoom());
+            Rooms[3, 3] = new MaelstromRoom();
+        }
         else if (levelSize == LevelSize.Large)
+        {
             (Rooms[2, 6], Rooms[0, 2], Rooms[1, 5], Rooms[6, 4]) = (new PitRoom(), new PitRoom(), new PitRoom(), new PitRoom());
+            (Rooms[1,4], Rooms[3, 5]) = (new MaelstromRoom(), new MaelstromRoom());
+        }
     }
 
     public void Run()
@@ -72,6 +81,15 @@ public class Game
             {
                 _renderer.PrintLostMessage();
                 break;
+            }
+
+            if (HasEncounteredMaelstrom())
+            {
+                Player.ExecuteAction(this, new MoveNorth());
+                Player.ExecuteAction(this, new MoveEast());
+                Player.ExecuteAction(this, new MoveEast());
+                _renderer.PrintMovedByMaelstrom();
+                _renderer.PrintRoundIntro(Player.Row, Player.Col);
             }
 
             Sense();
@@ -126,6 +144,8 @@ public class Game
     {
         if (room.GetType() == typeof(PitRoom))
             _renderer.PrintSensePit();
+        if (room.GetType() == typeof(MaelstromRoom))
+            _renderer.PrintSenseMaelstrom();
     }
 
     private bool HasWon()
@@ -138,6 +158,12 @@ public class Game
     private bool HasLost() => Rooms[Player.Row, Player.Col] switch
     {
         PitRoom => true,
+        _ => false,
+    };
+
+    private bool HasEncounteredMaelstrom() => Rooms[Player.Row, Player.Col] switch
+    {
+        MaelstromRoom => true,
         _ => false,
     };
 }
@@ -328,6 +354,14 @@ public class PitRoom : IRoom
     }
 }
 
+public class MaelstromRoom : IRoom
+{
+    public override string ToString()
+    {
+        return "You encounter the maelstrom - a sentient, malevolent wind.";
+    }
+}
+
 public class Renderer
 {
     public void PrintGameIntro()
@@ -367,6 +401,7 @@ public class Renderer
             FountainOfObjectsRoom => ConsoleColor.Blue,
             EntranceRoom => ConsoleColor.Yellow,
             PitRoom => ConsoleColor.DarkYellow,
+            MaelstromRoom => ConsoleColor.DarkYellow,
             _ => ConsoleColor.White,
         };
         Console.WriteLine(room);
@@ -389,6 +424,18 @@ public class Renderer
     public void PrintSensePit()
     {
         Console.WriteLine("You feel a draft. There is a pit in a nearby room.");
+    }
+
+    public void PrintSenseMaelstrom()
+    {
+        Console.WriteLine("You hear the growling and groaning of a maelstrom nearby.");
+    }
+
+    public void PrintMovedByMaelstrom()
+    {
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine("The malestrom moves you to another room.");
+        ResetColor();
     }
 
     public void ResetColor()
