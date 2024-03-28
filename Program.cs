@@ -85,11 +85,7 @@ public class Game
 
             if (HasEncounteredMaelstrom())
             {
-                Player.ExecuteAction(this, new MoveNorth());
-                Player.ExecuteAction(this, new MoveEast());
-                Player.ExecuteAction(this, new MoveEast());
-                _renderer.PrintMovedByMaelstrom();
-                _renderer.PrintRoundIntro(Player.Row, Player.Col);
+                HandleEncounter();
             }
 
             Sense();
@@ -98,7 +94,15 @@ public class Game
         }
     }
 
-    
+    private void HandleEncounter()
+    {
+        Player.ExecuteAction(this, new MoveNorth());
+        Player.ExecuteAction(this, new MoveEast());
+        Player.ExecuteAction(this, new MoveEast());
+        _renderer.PrintMovedByMaelstrom();
+        _renderer.PrintRoundIntro(Player.Row, Player.Col);
+    }
+
     private void AskForPlayerAction()
     {
         IAction action = _playerInput.AskForAction();
