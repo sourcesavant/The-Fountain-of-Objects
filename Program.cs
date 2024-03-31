@@ -42,17 +42,20 @@ public class Game
         if (levelSize == LevelSize.Small)
         {
             Rooms[0, 1] = new PitRoom();
-            Rooms[1, 0] = new MaelstromRoom();
+            Rooms[1, 1] = new MaelstromRoom();
+            Rooms[3, 1] = new AmarokRoom();
         }
         else if (levelSize == LevelSize.Medium)
         {
             (Rooms[1, 3], Rooms[2, 4]) = (new PitRoom(), new PitRoom());
             Rooms[3, 3] = new MaelstromRoom();
+            (Rooms[0, 2], Rooms[4, 1]) = (new PitRoom(), new AmarokRoom());
         }
         else if (levelSize == LevelSize.Large)
         {
-            (Rooms[2, 6], Rooms[0, 2], Rooms[1, 5], Rooms[6, 4]) = (new PitRoom(), new PitRoom(), new PitRoom(), new PitRoom());
-            (Rooms[1,4], Rooms[3, 5]) = (new MaelstromRoom(), new MaelstromRoom());
+            (Rooms[2, 6], Rooms[0, 2], Rooms[3, 4], Rooms[6, 4]) = (new PitRoom(), new PitRoom(), new PitRoom(), new PitRoom());
+            (Rooms[2, 1], Rooms[5, 3]) = (new MaelstromRoom(), new MaelstromRoom());
+            (Rooms[2, 0], Rooms[4, 2], Rooms[5, 6]) = (new AmarokRoom(), new AmarokRoom(), new AmarokRoom());
         }
     }
 
@@ -154,6 +157,9 @@ public class Game
             case RoomType.Maelstrom:
                 _renderer.PrintSenseMaelstrom();
                 break;
+            case RoomType.Amarok:
+                _renderer.PrintSenseAmarok();
+                break;
         }
     }
 
@@ -167,6 +173,7 @@ public class Game
     private bool HasLost() => Rooms[Player.Row, Player.Col] switch
     {
         PitRoom => true,
+        AmarokRoom => true,
         _ => false,
     };
 
@@ -371,6 +378,16 @@ public class PitRoom : IRoom
     }
 }
 
+public class AmarokRoom : IRoom
+{
+    public RoomType RoomType { get; } = RoomType.Amarok;
+
+    public override string ToString()
+    {
+        return "You encounter an amarok and you die.";
+    }
+}
+
 public class MaelstromRoom : IRoom
 {
     public RoomType RoomType { get; } = RoomType.Maelstrom;
@@ -421,6 +438,7 @@ public class Renderer
             EntranceRoom => ConsoleColor.Yellow,
             PitRoom => ConsoleColor.DarkYellow,
             MaelstromRoom => ConsoleColor.DarkYellow,
+            AmarokRoom => ConsoleColor.DarkYellow,
             _ => ConsoleColor.White,
         };
         Console.WriteLine(room);
@@ -450,6 +468,11 @@ public class Renderer
         Console.WriteLine("You hear the growling and groaning of a maelstrom nearby.");
     }
 
+    public void PrintSenseAmarok()
+    {
+        Console.WriteLine("You can smell the rotten stench of an amarok in a nearby room.");
+    }
+
     public void PrintMovedByMaelstrom()
     {
         Console.ForegroundColor = ConsoleColor.DarkYellow;
@@ -476,7 +499,8 @@ public enum RoomType
     Entrance,
     FountainOfObjects,
     Pit,
-    Maelstrom
+    Maelstrom,
+    Amarok
 }
 
 public class InvalidInputException : Exception
