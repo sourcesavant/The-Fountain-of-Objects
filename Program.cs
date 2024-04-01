@@ -1,6 +1,4 @@
-﻿using System.Xml.Serialization;
-
-Renderer renderer = new Renderer();
+﻿Renderer renderer = new Renderer();
 Game game = new Game(renderer, new PlayerInput(renderer));
 game.Run();
 
