@@ -70,7 +70,7 @@ public class Game
     {
         while (true)
         {
-            _renderer.PrintRoundIntro(Player.Row, Player.Col);
+            _renderer.PrintRoundIntro(Player.Row, Player.Col, Player.Arrows);
 
             if (HasWon())
             {
@@ -88,7 +88,7 @@ public class Game
 
             if (HasEncounteredMaelstrom())
             {
-                HandleEncounter();
+                HandleMaelstromEncounter();
             }
 
             Sense();
@@ -97,13 +97,13 @@ public class Game
         }
     }
 
-    private void HandleEncounter()
+    private void HandleMaelstromEncounter()
     {
         Player.ExecuteAction(this, new MoveNorth());
         Player.ExecuteAction(this, new MoveEast());
         Player.ExecuteAction(this, new MoveEast());
         _renderer.PrintMovedByMaelstrom();
-        _renderer.PrintRoundIntro(Player.Row, Player.Col);
+        _renderer.PrintRoundIntro(Player.Row, Player.Col, Player.Arrows);
     }
 
     private void AskForPlayerAction()
@@ -143,7 +143,7 @@ public class Game
         if (Player.Row > 0 && Player.Col > 0)
             SenseRoom(Rooms[Player.Row, Player.Col - 1]);
         // North West
-        if (Player.Row < Rows && Player.Col > 0)
+        if (Player.Row < Rows - 1 && Player.Col > 0)
             SenseRoom(Rooms[Player.Row + 1, Player.Col - 1]);
     }
 
@@ -189,6 +189,8 @@ public class Player
     public int Row { get; set; } = 0;
     public int Col { get; set; } = 0;
 
+    public int Arrows { get; set; } = 5;
+
     public bool ExecuteAction (Game game, IAction action)
     {
         return action.Execute(game);
@@ -221,7 +223,11 @@ public class PlayerInput
                     "move south" => new MoveSouth(),
                     "move west" => new MoveWest(),
                     "enable fountain" => new EnableFountain(),
-                    _ => throw new InvalidInputException("Invalid input. Please enter 'move north', 'move east', 'move south', 'move west' or 'enable fountain'.")
+                    "shoot nord" => new ShootNord(),
+                    "shoot east" => new ShootEast(),
+                    "shoot south" => new ShootSouth(),
+                    "shoot west" => new ShootWest(),
+                    _ => throw new InvalidInputException("Invalid input. Please enter 'move (north, east, south, west)', 'enable fountain' or 'shoot (north, east, south, west)'.")
                 };
             }
             catch (InvalidInputException e)
@@ -333,6 +339,7 @@ public interface IRoom
     public RoomType RoomType { get; }
 }
 
+
 public class EmptyRoom : IRoom
 {
     public RoomType RoomType { get; } = RoomType.Empty;
@@ -409,10 +416,10 @@ public class Renderer
         ResetColor();
     }
 
-    public void PrintRoundIntro(int playerRow, int playerCol)
+    public void PrintRoundIntro(int playerRow, int playerCol, int arrows)
     {
         Console.WriteLine("----------------------------------------------------------------------------------");
-        Console.WriteLine($"You are in the room at (Row={playerRow} Column={playerCol})");
+        Console.WriteLine($"You are in the room at (Row={playerRow} Column={playerCol}). You have {arrows} arrows.");
     }
 
     public void PrintWinMessage()
@@ -501,6 +508,81 @@ public enum RoomType
     Pit,
     Maelstrom,
     Amarok
+}
+
+abstract public class Shoot : IAction
+{
+
+    public bool Execute(Game game)
+    {
+        if (game.Player.Arrows > 0)
+            return DoShot(game);
+        return false;   
+    }
+
+    protected abstract bool DoShot(Game game);
+
+    protected bool hasTarget(IRoom room) => room is MaelstromRoom || room is AmarokRoom;
+
+    protected void ShootAtOffset(Game game, int rowOffset, int colOffset)
+    {
+        game.Player.Arrows--;
+        IRoom room = game.Rooms[game.Player.Row + rowOffset, game.Player.Col + colOffset];
+        if (hasTarget(room))
+            game.Rooms[game.Player.Row + rowOffset, game.Player.Col + colOffset] = new EmptyRoom();
+    }
+}
+
+public class ShootNord : Shoot
+{
+    protected override bool DoShot(Game game)
+    {
+        if (game.Player.Row < game.Rows - 1)
+        {
+            ShootAtOffset(game, 1, 0);
+            return true;
+        }
+        return false;
+    }
+}
+
+public class ShootSouth : Shoot
+{
+    protected override bool DoShot(Game game)
+    {
+        if (game.Player.Row > 0)
+        {
+            ShootAtOffset(game, -1, 0);
+            return true;
+        }
+        return false;
+    }
+}
+
+public class ShootEast : Shoot
+{
+    protected override bool DoShot(Game game)
+    {
+        if (game.Player.Col < game.Cols - 1)
+        {
+            ShootAtOffset(game, 0, 1);
+            return true;
+        }
+        return false;
+    }
+}
+
+public class ShootWest : Shoot
+{
+    protected override bool DoShot(Game game)
+    {
+        if (game.Player.Col > 0)
+        {
+            ShootAtOffset(game, 0, -1);
+            return true;
+        }
+        return false;
+    }
 }
 
 public class InvalidInputException : Exception
