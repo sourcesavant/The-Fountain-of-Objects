@@ -1,4 +1,6 @@
-﻿Renderer renderer = new Renderer();
+﻿using System.Xml.Serialization;
+
+Renderer renderer = new Renderer();
 Game game = new Game(renderer, new PlayerInput(renderer));
 game.Run();
 
@@ -223,10 +225,11 @@ public class PlayerInput
                     "move south" => new MoveSouth(),
                     "move west" => new MoveWest(),
                     "enable fountain" => new EnableFountain(),
-                    "shoot nord" => new ShootNord(),
+                    "shoot nord" => new ShootNorth(),
                     "shoot east" => new ShootEast(),
                     "shoot south" => new ShootSouth(),
                     "shoot west" => new ShootWest(),
+                    "help" => new Help(_renderer),
                     _ => throw new InvalidInputException("Invalid input. Please enter 'move (north, east, south, west)', 'enable fountain' or 'shoot (north, east, south, west)'.")
                 };
             }
@@ -334,6 +337,22 @@ public class EnableFountain : IAction
     }
 }
 
+public class Help : IAction
+{
+    private Renderer _renderer;
+    
+    public Help (Renderer renderer)
+    {
+        _renderer = renderer;
+    }   
+
+    public bool Execute(Game game)
+    {
+        _renderer.PrintHelpMessage();
+        return true;
+    }
+}
+
 public interface IRoom
 {
     public RoomType RoomType { get; }
@@ -410,9 +429,14 @@ public class Renderer
     public void PrintGameIntro()
     {
         Console.ForegroundColor = ConsoleColor.Magenta;
-        Console.WriteLine("Welome to the The Fountain of Objects!");
-        Console.WriteLine("Unnatural darkness pervades the caverns, preventing both natural and human-made light. You must navigate the caverns in the dark.");
-        Console.WriteLine("To escape you must find and enable the Fountain of Objects. But beware, dangers may lurk in every room.");
+        Console.WriteLine("You enter the Cavern of Objects, a maze of rooms filled with dangerous pits in search of the Fountain of Objects.");
+        Console.WriteLine("Light is visible only in the entrance, and no other light is seen anywhere in the caverns.");
+        Console.WriteLine("You must navigate the Caverns with your other senses.");
+        Console.WriteLine("Look out for pits. You will feel a breeze if a pit is in an adjacent room. If you enter a room with a pit, you will die.");
+        Console.WriteLine("Maelstroms are violent forces of sentient wind. Entering a room with one could transport you to any other location in the caverns. You will be able to hear their growling and groaning in nearby rooms.");
+        Console.WriteLine("Amaroks roam the caverns. Encountering one is certain death, but you can smell their rotten stench in nearby rooms.");
+        Console.WriteLine("You carry with you a bow and a quiver of arrows. You can use them to shoot monsters in the caverns but be warned: you have a limited supply.");
+        Console.WriteLine("Find the Fountain of Objects, activate it, and return to the entrance.");
         ResetColor();
     }
 
@@ -487,6 +511,17 @@ public class Renderer
         ResetColor();
     }
 
+    public void PrintHelpMessage()
+    {
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("Help: Available commands:");
+        Console.WriteLine("- move north, move south, move east, move west - moves one room in the given direction");
+        Console.WriteLine("- shoot north, shoot south, shoot east, shoot west - shoots in the given direction)");
+        Console.WriteLine("- enable fountain - enables the Fountain of Objects");
+        Console.WriteLine("- help (displays this message)");
+        ResetColor();
+    }
+
     public void ResetColor()
     {
         Console.ForegroundColor = ConsoleColor.White;
@@ -533,7 +568,7 @@ abstract public class Shoot : IAction
     }
 }
 
-public class ShootNord : Shoot
+public class ShootNorth : Shoot
 {
     protected override bool DoShot(Game game)
     {
